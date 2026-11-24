@@ -1,0 +1,24 @@
+name: 해 제출
+description: 배치 CSV를 제출하면 자동으로 채점되어 리더보드에 반영됩니다.
+title: "[제출] "
+body:
+  - type: dropdown
+    id: case
+    attributes:
+      label: Case
+      options:
+        - Case 1
+        - Case 2
+        - Case 3
+        - Case 4
+        - Case 5
+    validations:
+      required: true
+  - type: textarea
+    id: csv
+    attributes:
+      label: 제출 CSV
+      description: "dept,x,y,rot 형식의 CSV 내용을 통째로 붙여넣으세요 (헤더 포함). Case 3, 5는 VOID,0,0,0 행이 필요합니다."
+      render: csv
+    validations:
+      required: true
