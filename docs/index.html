@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facility Layout 리더보드</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b2430;--mut:#667085;--bd:#d9dee5;--pri:#244765;--gold:#fff4d6;--goldtx:#8a5a00}
+@media (prefers-color-scheme:dark){:root{--bg:#14181d;--card:#1d232b;--tx:#e8ecf1;--mut:#9aa4b2;--bd:#323a45;--pri:#5b8db8;--gold:#3a3016;--goldtx:#ffd77a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:7px 16px;border-radius:8px;cursor:pointer;font:inherit}
+.tab.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.banner{background:var(--gold);color:var(--goldtx);font-weight:700;font-size:18px;padding:12px 14px;border-radius:8px;margin-bottom:10px}
+.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{color:var(--mut);font-weight:600;font-size:13px}tr.first td{background:var(--gold);font-weight:700}
+a.btn,button{display:inline-block;background:transparent;color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer;text-decoration:none;margin:0 6px 6px 0}
+a.pri{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:700}
+.note{color:var(--mut);font-size:13px}
+textarea{display:none;width:100%;height:130px;margin-top:6px;padding:8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font:12px Consolas,monospace}
+</style></head><body><main>
+<h1>🏭 Facility Layout 팀 리더보드</h1>
+<div class="tabs" id="tabs"></div>
+<div class="card">
+<div class="banner" id="banner"></div>
+<div class="scroll"><table><thead><tr><th>순위</th><th>GitHub 아이디</th><th>목적함수값 Z (낮을수록 우수)</th><th>등록 시각</th><th>배치 CSV</th></tr></thead><tbody id="rows"></tbody></table></div>
+<textarea id="box" readonly></textarea>
+<div class="note" id="status"></div></div>
+<div class="card"><b>내 해 제출</b>
+<p class="note" style="margin:6px 0 10px">버튼을 누르면 GitHub 이슈 양식이 열립니다. Case를 고르고 CSV 내용을 붙여넣어 제출하면 자동 채점되어 잠시 후 순위에 반영됩니다. (GitHub 로그인 필요)</p>
+<a class="btn pri" id="submitLink" target="_blank" rel="noopener">✍️ 제출하기</a>
+<a class="btn" id="caseLink" target="_blank" rel="noopener">📄 이 Case 문제 JSON 보기</a></div>
+<script>
+const CASES=["1","2","3","4","5"];
+let cur="1",board={cases:{}};
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString("ko-KR",{minimumFractionDigits:4,maximumFractionDigits:4});
+// https://OWNER.github.io/REPO/  ->  OWNER, REPO
+const owner=location.hostname.split(".")[0],repo=location.pathname.split("/")[1]||"";
+const repoUrl="https://github.com/"+owner+"/"+repo;
+$("submitLink").href=repoUrl+"/issues/new?template=submit.yml";
+function csvOf(e){return "dept,x,y,rot\n"+e.layout.join("\n")+"\n"}
+function download(name,e){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csvOf(e)],{type:"text/csv"}));a.download="case"+cur+"_"+name+"_layout.csv";a.click()}
+async function copy(e){const b=$("box");b.value=csvOf(e);b.style.display="block";b.select();try{await navigator.clipboard.writeText(b.value)}catch(x){}}
+function render(){
+  $("tabs").innerHTML="";
+  CASES.forEach(c=>{const b=document.createElement("button");b.className="tab"+(c===cur?" on":"");b.textContent="Case "+c;
+    b.onclick=()=>{cur=c;render()};$("tabs").appendChild(b)});
+  const ents=Object.entries((board.cases||{})[cur]||{}).map(([n,e])=>({n,e})).sort((a,b)=>a.e.objective-b.e.objective||a.e.time.localeCompare(b.e.time));
+  $("banner").textContent=ents.length?"🏆 1등: "+ents[0].n+"  |  목적함수값 "+fmt(ents[0].e.objective):"아직 등록된 기록이 없습니다.";
+  $("caseLink").href=repoUrl+"/blob/main/cases/case"+cur+".json";
+  $("box").style.display="none";
+  const tb=$("rows");tb.innerHTML="";
+  ents.forEach((x,i)=>{const tr=document.createElement("tr");if(i===0)tr.className="first";
+    [i+1,x.n,fmt(x.e.objective),x.e.time].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td)});
+    const td=document.createElement("td");
+    const d=document.createElement("button");d.textContent="내려받기";d.style.margin="0 4px 0 0";d.onclick=()=>download(x.n,x.e);
+    const c=document.createElement("button");c.textContent="복사";c.style.margin="0";c.onclick=()=>copy(x.e);
+    td.append(d,c);tr.appendChild(td);tb.appendChild(tr)});
+}
+async function load(){
+  try{const r=await fetch("leaderboard.json?t="+Date.now(),{cache:"no-store"});board=await r.json();
+    $("status").textContent="마지막 확인: "+new Date().toLocaleTimeString("ko-KR")+" · 30초마다 자동 갱신";render()}
+  catch(e){$("status").textContent="리더보드를 불러오지 못했습니다."}
+}
+render();load();setInterval(load,30000);
+</script></main></body></html>
